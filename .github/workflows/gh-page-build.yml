@@ -1,5 +1,5 @@
-# iwc-lab addition. Builds this repository's workflows into a site with IWC's
-# website code, checked out at the commit pinned in website/iwc-ref.
+# iwc-lab addition. Builds this repository's workflows into a site with the
+# website code on IWC's main.
 name: Build and deploy the IWC Lab website
 
 on:
@@ -11,7 +11,8 @@ on:
       - '.github/workflows/gh-page-build.yml'
   schedule:
     # A workflow only shows up once Dockstore has registered it, which happens
-    # some time after the merge that deployed it.
+    # some time after the merge that deployed it. This is also how changes to
+    # IWC's site get here.
     - cron: '30 5 * * *'
   workflow_dispatch:
 
@@ -33,35 +34,15 @@ jobs:
     steps:
     - uses: actions/checkout@v4
 
-    - name: Read the pinned IWC commit
-      id: iwc
-      run: |
-        sha="$(tr -d '[:space:]' < website/iwc-ref)"
-        if ! [[ "$sha" =~ ^[0-9a-f]{40}$ ]]; then
-          echo "::error::website/iwc-ref must hold a full 40-character commit SHA, got '$sha'"
-          exit 1
-        fi
-        echo "sha=$sha" >> "$GITHUB_OUTPUT"
-
-    - name: Check out IWC's site code at the pin
+    - name: Check out IWC's site code
       uses: actions/checkout@v4
       with:
         repository: galaxyproject/iwc
-        ref: ${{ steps.iwc.outputs.sha }}
         path: iwc
         # Cone mode keeps the root files (requirements.txt, site-config.json) and skips IWC's workflows/
         sparse-checkout: |
           scripts
           website
-        # Full history without blobs, for the ancestry check below
-        fetch-depth: 0
-        filter: blob:none
-
-    - name: Check the pin is on IWC's main
-      # actions/checkout resolves any SHA in the fork network, so a commit from a fork would check out too
-      run: |
-        git -C iwc merge-base --is-ancestor "${{ steps.iwc.outputs.sha }}" origin/main || {
-          echo "::error::website/iwc-ref is not a commit on galaxyproject/iwc main"; exit 1; }
 
     - uses: actions/setup-python@v5
       with:

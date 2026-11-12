@@ -17,26 +17,25 @@ content -- real Format-2 workflows are the point of this repository.
 
 The workflows here are browsable at [iwc-lab.galaxyproject.org](https://iwc-lab.galaxyproject.org).
 The site is IWC's: `.github/workflows/gh-page-build.yml` checks out
-[galaxyproject/iwc](https://github.com/galaxyproject/iwc) at the commit in `website/iwc-ref`,
-runs its manifest script over this repository's `workflows/`, and builds its Astro site with
-`website/site-config.json` in place of IWC's own values. Nothing of the site's code lives here.
-See "Building a second site" in IWC's
+[galaxyproject/iwc](https://github.com/galaxyproject/iwc) at `main`, runs its manifest script
+over this repository's `workflows/`, and builds its Astro site with `website/site-config.json`
+in place of IWC's own values. Nothing of the site's code lives here. See "Building a second
+site" in IWC's
 [website README](https://github.com/galaxyproject/iwc/blob/main/website/README.md) for what
 each config key does.
 
 - `website/site-config.json` -- the lab's name, wording, links and Dockstore organization.
 - `website/about.md` -- the about page.
-- `website/iwc-ref` -- the IWC commit the site is built from. It has to be a full SHA on IWC's
-  `main`.
 
 The site is rebuilt on every push to `main` and once a day. A workflow appears once Dockstore
 has registered it under `iwc-lab-workflows`, which is some time after the merge that deployed
-it, so a new workflow can take until the next daily build to show up.
+it, so a new workflow can take until the next daily build to show up. The daily build is also
+how changes to IWC's site reach this one.
 
-### Moving to a newer IWC commit
+### When the build starts failing
 
-Changes to IWC's site reach this one only when `website/iwc-ref` is changed. Open a pull
-request that replaces the SHA with a newer one from IWC's `main`. The pull request builds the
-site without deploying it, and the result is attached to the run as the `site` artifact. If IWC
-has added a config key since the last pin, the build fails and names the key; add it to
-`website/site-config.json` in the same pull request.
+The site follows IWC's `main`, so a change there can break the build here. The site that is
+already deployed stays up. The usual cause is a new key in IWC's `site-config.json`: the build
+fails and names the key, and the fix is to add it to `website/site-config.json`. A pull request
+that touches `website/` builds the site without deploying it, and attaches the result to the
+run as the `site` artifact.
