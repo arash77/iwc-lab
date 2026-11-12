@@ -10,7 +10,7 @@
     "cached_at": "2026-11-12T15:29:05.806Z"
   },
   "artifacts": {
-    "parsed_tool_path": "~/.claude/jobs/abed2b75/tmp/tool-cache/ffe2ad0a90939fe84c671405db333a70266c0bad996a280bada8c67577083115.json",
+    "parsed_tool_path": "<tool-cache>/ffe2ad0a90939fe84c671405db333a70266c0bad996a280bada8c67577083115.json",
     "raw_tool_source_path": null
   },
   "parsed_tool": {
