@@ -1,0 +1,104 @@
+# iwc-lab addition. Builds this repository's workflows into a site with the
+# website code on IWC's main.
+name: Build and deploy the IWC Lab website
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    paths:
+      - 'website/**'
+      - '.github/workflows/gh-page-build.yml'
+  schedule:
+    # A workflow only shows up once Dockstore has registered it, which happens
+    # some time after the merge that deployed it. This is also how changes to
+    # IWC's site get here.
+    - cron: '30 5 * * *'
+  workflow_dispatch:
+
+permissions: {}
+
+concurrency:
+  group: gh-pages-${{ github.event_name == 'pull_request' && github.ref || 'deploy' }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
+jobs:
+  build:
+    name: Build site
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    env:
+      # Absolute, because the manifest and Astro steps run from different directories
+      SITE_CONFIG: ${{ github.workspace }}/website/site-config.json
+    steps:
+    - uses: actions/checkout@v4
+
+    - name: Check out IWC's site code
+      uses: actions/checkout@v4
+      with:
+        repository: galaxyproject/iwc
+        path: iwc
+        # Cone mode keeps the root files (requirements.txt, site-config.json) and skips IWC's workflows/
+        sparse-checkout: |
+          scripts
+          website
+
+    - uses: actions/setup-python@v5
+      with:
+        python-version: '3.12'
+
+    - name: Install Python dependencies
+      run: pip install -r iwc/requirements.txt
+
+    - name: Build the manifest from this repository's workflows
+      # Run from the iwc-lab root so repo paths and test-data URLs are iwc-lab's
+      run: |
+        python iwc/scripts/workflow_manifest.py \
+          --workflows ./workflows \
+          --repo-root . \
+          --output-dir iwc/website/public/data \
+          --manifest iwc/workflow_manifest.json
+
+    - uses: pnpm/action-setup@v4
+      with:
+        version: 10
+
+    - uses: actions/setup-node@v4
+      with:
+        node-version: '24'
+        cache: pnpm
+        cache-dependency-path: iwc/website/pnpm-lock.yaml
+
+    - name: Install site dependencies
+      run: pnpm install --frozen-lockfile
+      working-directory: iwc/website
+
+    - name: Build the site
+      run: pnpm run build
+      working-directory: iwc/website
+
+    - uses: actions/upload-artifact@v4
+      with:
+        name: site
+        path: iwc/website/dist
+        retention-days: 7
+
+  deploy:
+    name: Deploy to GitHub Pages
+    needs: build
+    if: github.event_name != 'pull_request' && github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+    - uses: actions/download-artifact@v4
+      with:
+        name: site
+        path: dist
+
+    - uses: peaceiris/actions-gh-pages@v4
+      with:
+        github_token: ${{ secrets.GITHUB_TOKEN }}
+        publish_dir: ./dist
+        cname: iwc-lab.galaxyproject.org
